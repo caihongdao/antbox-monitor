@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 - 矿机冷却系统监控平台</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../css/styles.css">
+    <style>
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+            padding: var(--space-lg);
+        }
+        
+        .login-card {
+            width: 100%;
+            max-width: 400px;
+            background: var(--gray-1);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-modal);
+            overflow: hidden;
+        }
+        
+        .login-header {
+            padding: var(--space-xl);
+            text-align: center;
+            background: linear-gradient(to right, var(--primary-color), var(--primary-hover));
+            color: white;
+        }
+        
+        .login-logo {
+            font-size: calc(32px * var(--resolution-scale));
+            margin-bottom: var(--space-md);
+        }
+        
+        .login-title {
+            font-size: calc(24px * var(--resolution-scale));
+            font-weight: 600;
+            margin-bottom: var(--space-xs);
+        }
+        
+        .login-subtitle {
+            font-size: calc(14px * var(--resolution-scale));
+            opacity: 0.9;
+        }
+        
+        .login-body {
+            padding: var(--space-xl);
+        }
+        
+        .login-footer {
+            padding: var(--space-lg) var(--space-xl);
+            text-align: center;
+            border-top: 1px solid var(--gray-3);
+            color: var(--gray-5);
+            font-size: calc(12px * var(--resolution-scale));
+        }
+        
+        .account-list {
+            margin-top: var(--space-lg);
+        }
+        
+        .account-item {
+            padding: var(--space-sm) var(--space-md);
+            background: var(--gray-2);
+            border-radius: var(--radius-base);
+            margin-bottom: var(--space-sm);
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .account-role {
+            display: inline-block;
+            padding: 2px 8px;
+            background: var(--primary-color);
+            color: white;
+            border-radius: var(--radius-sm);
+            font-size: calc(10px * var(--resolution-scale));
+            margin-left: var(--space-sm);
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="login-logo">
+                    <i class="fas fa-snowflake"></i>
+                </div>
+                <h1 class="login-title">矿机冷却系统监控平台</h1>
+                <p class="login-subtitle">请登录以访问监控系统</p>
+            </div>
+            
+            <div class="login-body">
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="username" class="form-label">
+                            <i class="fas fa-user"></i> 用户名
+                        </label>
+                        <input type="text" id="username" class="form-control" placeholder="请输入用户名" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="password" class="form-label">
+                            <i class="fas fa-lock"></i> 密码
+                        </label>
+                        <input type="password" id="password" class="form-control" placeholder="请输入密码" required>
+                    </div>
+                    
+                    <div class="form-group d-flex justify-content-between align-items-center">
+                        <div class="form-check">
+                            <input type="checkbox" id="remember-me" class="form-check-input">
+                            <label for="remember-me" class="form-check-label">记住我</label>
+                        </div>
+                        <a href="#" style="font-size: calc(12px * var(--resolution-scale));">忘记密码？</a>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100" style="padding: calc(12px * var(--resolution-scale));">
+                        <i class="fas fa-sign-in-alt"></i> 登录
+                    </button>
+                </form>
+                
+                <div class="account-list">
+                    <p style="margin-bottom: var(--space-sm); color: var(--gray-5); font-size: calc(12px * var(--resolution-scale));">
+                        <i class="fas fa-info-circle"></i> 测试账户：
+                    </p>
+                    
+                    <div class="account-item">
+                        <strong>管理员</strong> <span class="account-role">admin</span>
+                        <div style="font-size: calc(11px * var(--resolution-scale)); color: var(--gray-5); margin-top: 2px;">
+                            用户名: <code>admin</code> | 密码: <code>admin123</code>
+                            <br>权限: 完全控制权限，可查看所有操作记录
+                        </div>
+                    </div>
+                    
+                    <div class="account-item">
+                        <strong>操作员</strong> <span class="account-role" style="background: var(--success-color);">operator</span>
+                        <div style="font-size: calc(11px * var(--resolution-scale)); color: var(--gray-5); margin-top: 2px;">
+                            用户名: <code>operator</code> | 密码: <code>operator123</code>
+                            <br>权限: 基本控制权限，可查看监控
+                        </div>
+                    </div>
+                    
+                    <div class="account-item">
+                        <strong>游客</strong> <span class="account-role" style="background: var(--gray-5);">viewer</span>
+                        <div style="font-size: calc(11px * var(--resolution-scale)); color: var(--gray-5); margin-top: 2px;">
+                            用户名: <code>viewer</code> | 密码: <code>viewer123</code>
+                            <br>权限: 仅查看权限，不能控制或打开监控
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="login-footer">
+                <p>© 2026 矿机冷却系统监控平台 v1.0</p>
+                <p style="font-size: calc(10px * var(--resolution-scale)); opacity: 0.7;">
+                    所有操作将被记录。请妥善保管您的登录凭证。
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <script src="../js/common.js"></script>
+</body>
+</html>

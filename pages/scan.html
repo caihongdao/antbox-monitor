@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>站点扫描 - AntBox矿机冷却监控系统</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <style>
+        /* 独立模块化导航条样式 */
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #ffffff;
+            padding: 16px 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+            flex-wrap: wrap;
+        }
+        .logo-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: #262626;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .logo-link i {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #1890ff, #52c41a);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+        }
+        .main-nav {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .main-nav a {
+            text-decoration: none;
+            color: #595959;
+            font-weight: 600;
+            padding: 8px 16px;
+            border-radius: 6px;
+            background: #f0f2f5;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 15px;
+            border: 1px solid transparent;
+        }
+        .main-nav a:hover {
+            color: #1890ff;
+            background: #e6f7ff;
+            border-color: #91d5ff;
+        }
+        .main-nav a.active {
+            color: white;
+            background: #1890ff;
+            border-color: #1890ff;
+            box-shadow: 0 2px 6px rgba(24, 144, 255, 0.4);
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .header-right .user-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: bold;
+            color: #595959;
+        }
+        .header-right .btn-icon {
+            background: #f0f2f5;
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            cursor: pointer;
+            color: #595959;
+            transition: 0.3s;
+        }
+        .header-right .btn-icon:hover {
+            background: #e6f7ff;
+            color: #1890ff;
+        }
+        .btn-logout {
+            background: #fff1f0;
+            color: #f5222d;
+            border: 1px solid #ffa39e;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn-logout:hover {
+            background: #ffccc7;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- 顶部导航栏 -->
+        <header class="app-header">
+            <div class="header-left">
+                <a href="/" class="logo-link">
+                    <i class="fas fa-snowflake"></i>
+                    <span class="logo-text">AntBox监控系统</span>
+                </a>
+                <nav class="main-nav">
+                    <a href="/"><i class="fas fa-tachometer-alt"></i> 总览</a>
+                    <a href="sites.html"><i class="fas fa-server"></i> 全部站点</a>
+                    <a href="scan.html" class="active"><i class="fas fa-search"></i> 站点扫描</a>
+                    <a href="monitor-wall.html"><i class="fas fa-tv"></i> 监控墙</a>
+                    <a href="water-usage.html"><i class="fas fa-water"></i> 用水管理</a>
+                    <a href="account.html"><i class="fas fa-users"></i> 账号管理</a>
+                </nav>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <i class="fas fa-user-circle"></i>
+                    <span id="username">管理员</span>
+                </div>
+                <button class="btn btn-icon" title="通知">
+                    <i class="fas fa-bell"></i>
+                    <span class="badge">3</span>
+                </button>
+                <button class="btn btn-icon" title="设置">
+                    <i class="fas fa-cog"></i>
+                </button>
+                <button class="btn btn-logout" onclick="AppCommon.logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- 主内容区域 -->
+        <main class="app-main">
+            <!-- 面包屑导航 -->
+            <div class="breadcrumb">
+                <a href="/">总览</a>
+                <i class="fas fa-chevron-right"></i>
+                <span>站点扫描</span>
+            </div>
+
+            <!-- 页面标题 -->
+            <div class="page-header">
+                <h1><i class="fas fa-search"></i> 站点扫描</h1>
+                <p class="page-description">
+                    扫描IP范围内的AntBox设备和矿机，支持批量发现和导入站点。
+                </p>
+            </div>
+
+            
+<!-- 扫描结果 -->
+            <div class="scan-results card">
+                <div class="card-header">
+                    <h2><i class="fas fa-list-check"></i> 扫描结果</h2>
+                    <div class="result-stats">
+                        <span class="stat-item">
+                            <i class="fas fa-server" style="color: var(--primary-color);"></i>
+                            <span>AntBox: <span id="antbox-count">0</span></span>
+                        </span>
+                        <span class="stat-item">
+                            <i class="fas fa-microchip" style="color: var(--success-color);"></i>
+                            <span>矿机: <span id="miner-count">0</span></span>
+                        </span>
+                        <span class="stat-item">
+                            <i class="fas fa-times-circle" style="color: var(--error-color);"></i>
+                            <span>离线: <span id="offline-count">0</span></span>
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="result-controls">
+                        <div class="result-filters">
+                            <div class="filter-group">
+                                <label class="filter-checkbox">
+                                    <input type="checkbox" class="filter-type" value="antbox" checked>
+                                    <span class="filter-label antbox">AntBox设备</span>
+                                </label>
+                                <label class="filter-checkbox">
+                                    <input type="checkbox" class="filter-type" value="miner" checked>
+                                    <span class="filter-label miner">矿机设备</span>
+                                </label>
+                                <label class="filter-checkbox">
+                                    <input type="checkbox" class="filter-type" value="unknown" checked>
+                                    <span class="filter-label unknown">未知设备</span>
+                                </label>
+                            </div>
+                            <div class="search-box">
+                                <i class="fas fa-search"></i>
+                                <input type="text" id="result-search" placeholder="搜索IP或设备类型...">
+                            </div>
+                        </div>
+                        <div class="result-actions">
+                            <button class="btn btn-icon" id="select-all" title="全选">
+                                <i class="fas fa-check-square"></i>
+                            </button>
+                            <button class="btn btn-icon" id="select-none" title="取消全选">
+                                <i class="fas fa-square"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="results-table-container">
+                        <table class="results-table" id="results-table">
+                            <thead>
+                                <tr>
+                                    <th width="40"><input type="checkbox" id="select-all-checkbox"></th>
+                                    <th width="60">状态</th>
+                                    <th width="120">IP地址</th>
+                                    <th width="100">设备类型</th>
+                                    <th width="100">响应时间</th>
+                                    <th>设备信息</th>
+                                    <th width="150">发现时间</th>
+                                    <th width="120">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="results-body">
+                                
+
+                                <tr class="no-results" id="no-results-row">
+                                    <td colspan="8" style="text-align: center; padding: 20px;">
+                                        <div class="empty-state">
+                                            <i class="fas fa-search fa-3x" style="color: #ccc; margin-bottom: 10px;"></i>
+                                            <p style="color: #888;">暂无扫描数据，请先配置并开始扫描</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="result-summary" id="result-summary" style="display: none;">
+                        <h3><i class="fas fa-chart-pie"></i> 扫描统计摘要</h3>
+                        <div class="summary-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 15px;">
+                            <div class="summary-item"><div class="summary-label">扫描IP范围</div><div class="summary-value" id="summary-range">-</div></div>
+                            <div class="summary-item"><div class="summary-label">总IP数量</div><div class="summary-value" id="summary-total-ips">0</div></div>
+                            <div class="summary-item"><div class="summary-label">已扫描IP</div><div class="summary-value" id="summary-scanned-ips">0</div></div>
+                            <div class="summary-item"><div class="summary-label">在线设备</div><div class="summary-value" id="summary-online">0</div></div>
+                            <div class="summary-item"><div class="summary-label">AntBox设备</div><div class="summary-value" id="summary-antbox">0</div></div>
+                            <div class="summary-item"><div class="summary-label">矿机设备</div><div class="summary-value" id="summary-miner">0</div></div>
+                            <div class="summary-item"><div class="summary-label">成功率</div><div class="summary-value" id="summary-success-rate">0%</div></div>
+                            <div class="summary-item"><div class="summary-label">总用时</div><div class="summary-value" id="summary-total-time">00:00</div></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer" style="padding: 15px; border-top: 1px solid #eaeaea; display: flex; gap: 10px;">
+                    <button class="btn btn-primary" id="import-selected" disabled><i class="fas fa-upload"></i> 导入选中设备</button>
+                    <button class="btn btn-secondary" id="clear-results"><i class="fas fa-trash"></i> 清空结果</button>
+                </div>
+            </div>
+
+<!-- 扫描进度 -->
+                    <div class="scan-progress" id="scan-progress" style="display: none;">
+                        <div class="progress-header">
+                            <h3><i class="fas fa-chart-line"></i> 扫描进度</h3>
+                            <div class="progress-stats">
+                                <span id="current-ip">当前: -</span>
+                                <span id="scanned-count">已扫描: 0</span>
+                                <span id="found-count">发现: 0</span>
+                            </div>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" id="progress-bar">
+                                <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+                            </div>
+                            <div class="progress-text" id="progress-text">0%</div>
+                        </div>
+                        <div class="progress-details">
+                            <div class="progress-detail">
+                                <i class="fas fa-clock"></i>
+                                <span>已用时: <span id="elapsed-time">00:00</span></span>
+                            </div>
+                            <div class="progress-detail">
+                                <i class="fas fa-tachometer-alt"></i>
+                                <span>扫描速度: <span id="scan-speed">0 IP/s</span></span>
+                            </div>
+                            <div class="progress-detail">
+                                <i class="fas fa-hourglass-half"></i>
+                                <span>预计剩余: <span id="eta">--:--</span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            
+
+<!-- 扫描控制面板 -->
+            <div class="scan-control-panel card">
+                <div class="card-header">
+                    <h2><i class="fas fa-network-wired"></i> IP范围扫描配置</h2>
+                </div>
+                <div class="card-body">
+                    <form id="scan-form" class="scan-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="start-ip">
+                                    <i class="fas fa-play-circle"></i> 起始IP
+                                </label>
+                                <input type="text" id="start-ip" name="start_ip" 
+                                       placeholder="例如: 10.1.1.1" 
+                                       value="10.1.100.1" required>
+                                <div class="form-hint">扫描范围的起始IP地址</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="end-ip">
+                                    <i class="fas fa-stop-circle"></i> 结束IP
+                                </label>
+                                <input type="text" id="end-ip" name="end_ip" 
+                                       placeholder="例如: 10.1.120.254" 
+                                       value="10.1.120.254" required>
+                                <div class="form-hint">扫描范围的结束IP地址</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="timeout">
+                                    <i class="fas fa-clock"></i> 超时时间(ms)
+                                </label>
+                                <input type="number" id="timeout" name="timeout" 
+                                       value="2000" min="500" max="10000" step="500">
+                                <div class="form-hint">单个设备连接超时时间</div>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="max-concurrent">
+                                    <i class="fas fa-bolt"></i> 最大并发数
+                                </label>
+                                <input type="number" id="max-concurrent" name="max_concurrent" 
+                                       value="20" min="1" max="100">
+                                <div class="form-hint">同时扫描的设备数量</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="port">
+                                    <i class="fas fa-plug"></i> 端口号
+                                </label>
+                                <input type="number" id="port" name="port" 
+                                       value="80" min="1" max="65535">
+                                <div class="form-hint">HTTP服务端口</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="scan-type">
+                                    <i class="fas fa-filter"></i> 扫描类型
+                                </label>
+                                <select id="scan-type" name="scan_type">
+                                    <option value="antbox">仅AntBox设备</option>
+                                    <option value="miner">仅矿机设备</option>
+                                    <option value="all" selected>全部设备</option>
+                                </select>
+                                <div class="form-hint">选择要扫描的设备类型</div>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary btn-lg" id="start-scan">
+                                <i class="fas fa-play"></i> 开始扫描
+                            </button>
+                            <button type="button" class="btn btn-secondary" id="stop-scan" disabled>
+                                <i class="fas fa-stop"></i> 停止扫描
+                            </button>
+                            <button type="button" class="btn btn-outline" id="clear-results">
+                                <i class="fas fa-trash"></i> 清空结果
+                            </button>
+                            <button type="button" class="btn btn-success" id="import-selected" disabled>
+                                <i class="fas fa-database"></i> 导入选中站点
+                            </button>
+                        </div>
+                    </form>
+
+                    
+
+<!-- 扫描日志 -->
+            <div class="scan-log card">
+                <div class="card-header">
+                    <h2><i class="fas fa-file-alt"></i> 扫描日志</h2>
+                    <div class="log-controls">
+                        <button class="btn btn-sm" id="clear-log">
+                            <i class="fas fa-trash"></i> 清空日志
+                        </button>
+                        <button class="btn btn-sm" id="export-log">
+                            <i class="fas fa-download"></i> 导出日志
+                        </button>
+                        <div class="log-level-filter">
+                            <select id="log-level">
+                                <option value="all">所有级别</option>
+                                <option value="info" selected>信息</option>
+                                <option value="success">成功</option>
+                                <option value="warning">警告</option>
+                                <option value="error">错误</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="log-container" id="log-container">
+                        <div class="log-entry info">
+                            <div class="log-time">19:50:00</div>
+                            <div class="log-message">站点扫描页面已加载</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- 页面脚注 -->
+        <footer class="app-footer">
+            <div class="footer-content">
+                <div class="footer-left">
+                    <span class="resolution-info">
+                        分辨率: <span id="resolution-scale">1920×1080</span>
+                    </span>
+                    <span class="memory-info">
+                        内存: <span id="memory-usage">-</span>
+                    </span>
+                </div>
+                <div class="footer-right">
+                    <span class="system-status">
+                        <i class="fas fa-circle" style="color: var(--success-color);"></i>
+                        系统运行正常
+                    </span>
+                    <span class="last-update">
+                        最后更新: <span id="last-update-time">--:--:--</span>
+                    </span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- JavaScript依赖 -->
+    <script src="../js/common.js"></script>
+    <script src="../js/scan_backend.js"></script>
+</body>
+</html>

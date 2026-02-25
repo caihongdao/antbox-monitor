@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大屏监控墙 - AntBox矿机冷却监控系统</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* 电视大屏定制化黑底模式 */
+        :root {
+            --bg-color: #0d1117;
+            --card-bg: #161b22;
+            --text-color: #c9d1d9;
+            --text-muted: #8b949e;
+            --border-color: #30363d;
+            
+            --success-color: #238636;
+            --error-color: #da3633;
+            --warning-color: #d29922;
+            --info-color: #1f6feb;
+        }
+
+        body.tv-mode {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden; /* 防止滚动 */
+        }
+
+        .wall-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .wall-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+
+        .wall-title {
+            font-size: 32px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: #ffffff;
+        }
+
+        .wall-stats {
+            display: flex;
+            gap: 20px;
+        }
+
+        .stat-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background-color: var(--card-bg);
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .stat-badge .value { font-size: 28px; }
+        .stat-total { color: var(--info-color); }
+        .stat-online { color: var(--success-color); }
+        .stat-offline { color: var(--error-color); }
+        .stat-alarm { color: var(--warning-color); }
+
+        .wall-body {
+            display: flex;
+            gap: 20px;
+            flex: 1;
+            height: calc(100vh - 120px);
+        }
+
+        .wall-grid {
+            flex: 3;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+            align-content: start;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        /* 隐藏滚动条 */
+        .wall-grid::-webkit-scrollbar { width: 8px; }
+        .wall-grid::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
+
+        .site-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            transition: all 0.3s;
+        }
+
+        .site-card.status-online { border-left: 5px solid var(--success-color); }
+        .site-card.status-offline { border-left: 5px solid var(--error-color); opacity: 0.7; }
+        .site-card.status-alarm { border-left: 5px solid var(--warning-color); animation: pulse 2s infinite; }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(218, 54, 51, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(218, 54, 51, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(218, 54, 51, 0); }
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            font-size: 18px;
+            color: #ffffff;
+        }
+
+        .card-metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            font-size: 14px;
+        }
+
+        .metric {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .metric-label { color: var(--text-muted); font-size: 12px; }
+        .metric-value { font-weight: bold; font-size: 18px; }
+        .temp-high { color: var(--error-color); }
+        .hashrate-low { color: var(--warning-color); }
+
+        .wall-sidebar {
+            flex: 1;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            max-width: 400px;
+        }
+
+        .sidebar-header {
+            padding: 15px;
+            background-color: #21262d;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 18px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+
+        .alert-list {
+            padding: 15px;
+            overflow-y: auto;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .alert-item {
+            background-color: rgba(218, 54, 51, 0.1);
+            border: 1px solid rgba(218, 54, 51, 0.3);
+            border-radius: 6px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .alert-item .alert-time { font-size: 12px; color: var(--text-muted); }
+        .alert-item .alert-title { font-weight: bold; color: var(--error-color); }
+        .alert-item .alert-desc { font-size: 14px; }
+
+        /* 全屏按钮 */
+        .fullscreen-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: 0.2s;
+        }
+        .fullscreen-btn:hover { background-color: var(--border-color); }
+
+    </style>
+</head>
+<body class="tv-mode">
+    <div class="wall-container">
+        <!-- 头部 -->
+        <div class="wall-header">
+            <div class="wall-title">
+                <i class="fas fa-desktop" style="color: var(--primary-color);"></i>
+                <span>AntBox 监控墙 (实时)</span>
+                <span id="clock" style="font-size: 20px; color: var(--text-muted); margin-left: 20px; font-weight: normal;"></span>
+            </div>
+            
+            <div class="wall-stats">
+                <div class="stat-badge">
+                    <i class="fas fa-server"></i>
+                    <div class="metric">
+                        <span class="metric-label">总计</span>
+                        <span class="value stat-total" id="total-sites">-</span>
+                    </div>
+                </div>
+                <div class="stat-badge">
+                    <i class="fas fa-check-circle"></i>
+                    <div class="metric">
+                        <span class="metric-label">在线</span>
+                        <span class="value stat-online" id="online-sites">-</span>
+                    </div>
+                </div>
+                <div class="stat-badge">
+                    <i class="fas fa-times-circle"></i>
+                    <div class="metric">
+                        <span class="metric-label">离线</span>
+                        <span class="value stat-offline" id="offline-sites">-</span>
+                    </div>
+                </div>
+                <div class="stat-badge">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <div class="metric">
+                        <span class="metric-label">告警</span>
+                        <span class="value stat-alarm" id="alarm-sites">-</span>
+                    </div>
+                </div>
+                <button class="fullscreen-btn" id="fs-btn" onclick="toggleFullScreen()">
+                    <i class="fas fa-expand"></i> 全屏
+                </button>
+            </div>
+        </div>
+
+        <!-- 主体区域 -->
+        <div class="wall-body">
+            <!-- 站点网格矩阵 -->
+            <div class="wall-grid" id="wall-grid">
+                <!-- 动态生成 -->
+            </div>
+
+            <!-- 实时告警侧边栏 -->
+            <div class="wall-sidebar">
+                <div class="sidebar-header">
+                    <i class="fas fa-bell"></i> 实时告警通知
+                </div>
+                <div class="alert-list" id="alert-list">
+                    <!-- 动态生成 -->
+                    <div style="color: var(--text-muted); text-align: center; margin-top: 50px;">
+                        <i class="fas fa-shield-alt fa-3x" style="opacity: 0.5; margin-bottom: 10px;"></i>
+                        <p>当前暂无活跃告警</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/monitor-wall.js"></script>
+</body>
+</html>

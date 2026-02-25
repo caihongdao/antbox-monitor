@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备详情 - AntBox监控系统</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* 设备详情页面专用样式 */
+        .device-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--space-lg);
+            padding-bottom: var(--space-md);
+            border-bottom: 2px solid var(--primary-color);
+        }
+        
+        .device-title {
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+        }
+        
+        .device-actions {
+            display: flex;
+            gap: var(--space-sm);
+        }
+        
+        .device-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--space-lg);
+            margin-bottom: var(--space-xl);
+        }
+        
+        .info-card {
+            background-color: white;
+            border-radius: var(--radius-lg);
+            padding: var(--space-lg);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .info-card h3 {
+            margin-top: 0;
+            margin-bottom: var(--space-md);
+            padding-bottom: var(--space-sm);
+            border-bottom: 1px solid var(--gray-3);
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: var(--space-xs) 0;
+            border-bottom: 1px solid var(--gray-2);
+        }
+        
+        .info-item:last-child {
+            border-bottom: none;
+        }
+        
+        .info-label {
+            font-weight: 500;
+            color: var(--gray-6);
+        }
+        
+        .info-value {
+            font-weight: 600;
+            color: var(--gray-9);
+        }
+        
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-xs);
+            padding: 4px 12px;
+            border-radius: var(--radius-round);
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .status-online {
+            background-color: rgba(82, 196, 26, 0.1);
+            color: var(--success-color);
+        }
+        
+        .status-offline {
+            background-color: rgba(245, 34, 45, 0.1);
+            color: var(--error-color);
+        }
+        
+        .status-unknown {
+            background-color: rgba(140, 140, 140, 0.1);
+            color: var(--gray-5);
+        }
+        
+        .ping-results {
+            margin-top: var(--space-md);
+        }
+        
+        .ping-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--space-md);
+            margin-bottom: var(--space-lg);
+        }
+        
+        .metric-card {
+            text-align: center;
+            padding: var(--space-md);
+            border-radius: var(--radius-base);
+            background-color: var(--gray-2);
+        }
+        
+        .metric-value {
+            font-size: 24px;
+            font-weight: 700;
+            margin: var(--space-xs) 0;
+        }
+        
+        .metric-label {
+            font-size: 12px;
+            color: var(--gray-5);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .latency-good { color: var(--success-color); }
+        .latency-medium { color: var(--warning-color); }
+        .latency-poor { color: var(--error-color); }
+        
+        .action-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--space-md);
+            margin-top: var(--space-lg);
+        }
+        
+        .action-button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: var(--space-lg);
+            border: 2px solid var(--gray-3);
+            border-radius: var(--radius-lg);
+            background-color: white;
+            cursor: pointer;
+            transition: all var(--animation-duration);
+            text-align: center;
+        }
+        
+        .action-button:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .action-button i {
+            font-size: 32px;
+            margin-bottom: var(--space-sm);
+            color: var(--primary-color);
+        }
+        
+        .action-button h4 {
+            margin: 0 0 var(--space-xs) 0;
+        }
+        
+        .action-button p {
+            margin: 0;
+            font-size: 12px;
+            color: var(--gray-5);
+        }
+        
+        .history-chart-container {
+            height: 300px;
+            margin-top: var(--space-md);
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid var(--gray-3);
+            border-top: 5px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: var(--space-md);
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            .device-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: var(--space-md);
+            }
+            
+            .device-actions {
+                justify-content: center;
+            }
+            
+            .device-info-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .ping-metrics {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .action-buttons {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .ping-metrics {
+                grid-template-columns: 1fr;
+            }
+            
+            .action-buttons {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- 顶部导航栏 -->
+        <header class="app-header">
+            <div class="header-left">
+                <button class="btn btn-icon" onclick="history.back()">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <h1>设备详情</h1>
+            </div>
+            <div class="header-right">
+                <button class="btn btn-icon" onclick="refreshDeviceData()" title="刷新">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                <a href="/pages/scan.html" class="btn btn-primary">
+                    <i class="fas fa-search"></i> 返回扫描
+                </a>
+            </div>
+        </header>
+
+        <!-- 主要内容区域 -->
+        <main class="main-content">
+            <div class="container">
+                <!-- 设备标题区域 -->
+                <div class="device-header">
+                    <div class="device-title">
+                        <i class="fas fa-server fa-2x"></i>
+                        <div>
+                            <h2 id="device-name">加载中...</h2>
+                            <div id="device-status" class="status-indicator status-unknown">状态未知</div>
+                        </div>
+                    </div>
+                    <div class="device-actions">
+                        <button class="btn btn-primary" onclick="runPingTest()">
+                            <i class="fas fa-network-wired"></i> Ping测试
+                        </button>
+                        <button class="btn btn-secondary" onclick="testConnection()">
+                            <i class="fas fa-plug"></i> 连接测试
+                        </button>
+                        <button class="btn btn-danger" onclick="showDeleteConfirm()">
+                            <i class="fas fa-trash"></i> 删除
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 设备信息网格 -->
+                <div class="device-info-grid">
+                    <!-- 基本信息卡片 -->
+                    <div class="info-card">
+                        <h3><i class="fas fa-info-circle"></i> 基本信息</h3>
+                        <div class="info-item">
+                            <span class="info-label">IP地址:</span>
+                            <span class="info-value" id="device-ip">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">端口:</span>
+                            <span class="info-value" id="device-port">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">设备类型:</span>
+                            <span class="info-value" id="device-type">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">发现时间:</span>
+                            <span class="info-value" id="discovery-time">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">最后检测:</span>
+                            <span class="info-value" id="last-check">-</span>
+                        </div>
+                    </div>
+
+                    <!-- 网络状态卡片 -->
+                    <div class="info-card">
+                        <h3><i class="fas fa-signal"></i> 网络状态</h3>
+                        <div class="info-item">
+                            <span class="info-label">Ping状态:</span>
+                            <span class="info-value">
+                                <span id="ping-status" class="status-indicator status-unknown">未检测</span>
+                            </span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">HTTP状态:</span>
+                            <span class="info-value">
+                                <span id="http-status" class="status-indicator status-unknown">未检测</span>
+                            </span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">响应时间:</span>
+                            <span class="info-value" id="response-time">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">TTL值:</span>
+                            <span class="info-value" id="ttl-value">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">丢包率:</span>
+                            <span class="info-value" id="packet-loss">-</span>
+                        </div>
+                    </div>
+
+                    <!-- Ping检测结果 -->
+                    <div class="info-card">
+                        <h3><i class="fas fa-chart-line"></i> Ping检测指标</h3>
+                        <div class="ping-metrics">
+                            <div class="metric-card">
+                                <div class="metric-label">平均延迟</div>
+                                <div class="metric-value latency-good" id="avg-latency">- ms</div>
+                                <div class="metric-label">网络延迟</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">最小延迟</div>
+                                <div class="metric-value latency-good" id="min-latency">- ms</div>
+                                <div class="metric-label">最佳延迟</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">最大延迟</div>
+                                <div class="metric-value latency-poor" id="max-latency">- ms</div>
+                                <div class="metric-label">最差延迟</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">丢包率</div>
+                                <div class="metric-value" id="loss-rate">- %</div>
+                                <div class="metric-label">网络质量</div>
+                            </div>
+                        </div>
+                        <button class="btn btn-sm btn-outline" onclick="showPingHistory()">
+                            <i class="fas fa-history"></i> 查看历史记录
+                        </button>
+                    </div>
+
+                    <!-- 设备详情 -->
+                    <div class="info-card">
+                        <h3><i class="fas fa-microchip"></i> 设备详情</h3>
+                        <div class="info-item">
+                            <span class="info-label">设备型号:</span>
+                            <span class="info-value" id="device-model">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">固件版本:</span>
+                            <span class="info-value" id="firmware-version">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">运行时间:</span>
+                            <span class="info-value" id="uptime">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">温度:</span>
+                            <span class="info-value" id="temperature">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">功率:</span>
+                            <span class="info-value" id="power-consumption">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 操作按钮区域 -->
+                <div class="action-buttons">
+                    <div class="action-button" onclick="openWebInterface()">
+                        <i class="fas fa-external-link-alt"></i>
+                        <h4>Web界面</h4>
+                        <p>打开设备Web管理界面</p>
+                    </div>
+                    <div class="action-button" onclick="showPortScan()">
+                        <i class="fas fa-search-plus"></i>
+                        <h4>端口扫描</h4>
+                        <p>扫描设备开放端口</p>
+                    </div>
+                    <div class="action-button" onclick="showTrafficMonitor()">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <h4>流量监控</h4>
+                        <p>实时网络流量监控</p>
+                    </div>
+                    <div class="action-button" onclick="showLogs()">
+                        <i class="fas fa-file-alt"></i>
+                        <h4>设备日志</h4>
+                        <p>查看设备运行日志</p>
+                    </div>
+                    <div class="action-button" onclick="showConfigBackup()">
+                        <i class="fas fa-download"></i>
+                        <h4>配置备份</h4>
+                        <p>备份设备配置文件</p>
+                    </div>
+                    <div class="action-button" onclick="showRebootOptions()">
+                        <i class="fas fa-power-off"></i>
+                        <h4>重启控制</h4>
+                        <p>远程重启设备</p>
+                    </div>
+                </div>
+
+                <!-- 历史图表区域 -->
+                <div class="info-card">
+                    <h3><i class="fas fa-chart-area"></i> Ping历史趋势</h3>
+                    <div class="history-chart-container" id="ping-history-chart">
+                        <div class="empty-state">
+                            <i class="fas fa-chart-line fa-2x"></i>
+                            <p>暂无历史数据</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 加载遮罩层 -->
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner"></div>
+        <p id="loading-text">加载中...</p>
+    </div>
+
+    <!-- 脚本引用 -->
+    <script src="/js/common.js"></script>
+    <script src="/js/device_detail.js"></script>
+</body>
+</html>

@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>站点监控大屏 - AntBox</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --card-bg: #161b22;
+            --text-color: #c9d1d9;
+            --text-muted: #8b949e;
+            --border-color: #30363d;
+            --success-color: #238636;
+            --error-color: #da3633;
+            --warning-color: #d29922;
+            --info-color: #1f6feb;
+            --hover-bg: rgba(255, 255, 255, 0.05);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 顶部标题栏 */
+        .dashboard-header {
+            padding: 20px 30px;
+            background: rgba(22, 27, 34, 0.8);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .dashboard-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* 大屏网格布局 - 核心响应式逻辑 */
+        .sites-grid {
+            display: grid;
+            /* 设定最小宽度420px，在1920分辨率下刚好排下4列，若屏幕缩小会自动变为3列 */
+            grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+            gap: 20px;
+            padding: 20px 30px;
+            flex: 1;
+        }
+
+        /* 站点卡片整体样式 */
+        .site-card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .site-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            border-color: #4a545e;
+        }
+
+        /* 卡片头部 - 核心数据 (对应草图第一排) */
+        .card-header-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .stat-item {
+            padding: 12px 8px;
+            text-align: center;
+            border-right: 1px solid var(--border-color);
+        }
+        .stat-item:last-child { border-right: none; }
+        
+        .stat-item .label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+        .stat-item .value { font-size: 16px; font-weight: bold; color: #fff; font-family: monospace; }
+        .stat-item.power .value { color: #58a6ff; }
+        .stat-item.hashrate .value { color: #a371f7; }
+
+        /* 卡片主体：左右分栏 */
+        .card-body {
+            display: flex;
+            flex-direction: row;
+            height: 240px; /* 固定高度确保网格对齐 */
+        }
+
+        /* 左侧：标签页与内容 */
+        .body-left {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(0,0,0,0.2);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px 5px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 13px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: 0.2s;
+        }
+
+        .tab-btn:hover { color: var(--text-color); }
+        .tab-btn.active { color: var(--info-color); border-bottom-color: var(--info-color); font-weight: 600; }
+        .tab-btn.alarm-tab.active { color: var(--warning-color); border-bottom-color: var(--warning-color); }
+
+        .tab-content {
+            padding: 12px;
+            flex: 1;
+            overflow-y: auto;
+            display: none;
+        }
+        .tab-content.active { display: block; }
+
+        .status-list { list-style: none; font-size: 13px; }
+        .status-list li { margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        .status-list li i.success { color: var(--success-color); }
+        .status-list li i.error { color: var(--error-color); }
+
+        /* 右侧：控制面板 (对应草图右半部分) */
+        .body-right {
+            width: 140px; /* 给右侧固定宽度 */
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.01);
+        }
+
+        /* 控制按钮 */
+        .control-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: 0.2s;
+        }
+        .control-btn:hover { background: var(--hover-bg); }
+        .control-btn .indicator {
+            width: 10px; height: 10px; border-radius: 50%; border: 1px solid var(--text-muted);
+        }
+        .control-btn.btn-on:hover .indicator { background: var(--success-color); border-color: var(--success-color); box-shadow: 0 0 5px var(--success-color);}
+        .control-btn.btn-off:hover .indicator { background: var(--error-color); border-color: var(--error-color); box-shadow: 0 0 5px var(--error-color);}
+
+        /* 温度设置区 */
+        .temp-control {
+            margin-top: auto;
+            border-top: 1px dashed var(--border-color);
+            padding-top: 10px;
+        }
+        .temp-label { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
+        .temp-target { font-size: 18px; font-weight: bold; color: #fff; margin-bottom: 10px; text-align: center;}
+        
+        .input-group { display: flex; gap: 4px; }
+        .input-group input {
+            width: 100%; min-width: 0; background: #000; border: 1px solid var(--border-color);
+            color: #fff; padding: 4px; border-radius: 4px; text-align: center; font-size: 12px;
+        }
+        .input-group button {
+            background: var(--info-color); color: #fff; border: none; padding: 4px 8px;
+            border-radius: 4px; cursor: pointer; font-size: 12px;
+        }
+        .input-group button:hover { background: #1158c7; }
+
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+    </style>
+</head>
+<body>
+
+    <header class="dashboard-header">
+        <div class="dashboard-title">
+            <i class="fas fa-desktop" style="color: var(--info-color);"></i> 站点实时监控大屏
+        </div>
+        <div style="font-size: 14px; color: var(--text-muted);">
+            <i class="fas fa-clock"></i> 自动刷新中...
+        </div>
+    </header>
+
+    <div class="sites-grid" id="sitesGrid">
+        </div>
+
+    <script>
+        // 模拟数据生成
+        function generateMockData(count) {
+            const data = [];
+            for (let i = 1; i <= count; i++) {
+                data.push({
+                    id: `site-${i}`,
+                    power: (Math.random() * 200 + 800).toFixed(1), // 800-1000 kW
+                    efficiency: (Math.random() * 5 + 18).toFixed(1), //
