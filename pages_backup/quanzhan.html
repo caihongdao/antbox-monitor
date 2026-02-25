@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>蚂蚁水冷系统数据监控</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* ==================== 浅色主题变量 ==================== */
+        :root {
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --text-main: #262626;
+            --text-muted: #8c8c8c;
+            --border-color: #f0f0f0;
+            --border-hover: #d9d9d9;
+            --success-bg: #f6ffed;
+            --success-border: #b7eb8f;
+            --success-color: #52c41a;
+            --error-bg: #fff1f0;
+            --error-color: #f5222d;
+            --warning-bg: #fffbe6;
+            --warning-border: #ffe58f;
+            --warning-color: #faad14;
+            --info-color: #1890ff;
+            --hover-bg: #fafafa;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 全局导航栏 - 修改 1: 背景色与主题统一 */
+        .global-nav {
+            background: var(--bg-color);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0 30px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .nav-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 60px;
+        }
+        .nav-left { display: flex; align-items: center; gap: 24px; }
+        .nav-logo {
+            display: flex; align-items: center; gap: 10px;
+            text-decoration: none; color: var(--text-main);
+            font-size: 18px; font-weight: 600;
+        }
+        .nav-logo i { color: var(--info-color); font-size: 24px; }
+        .nav-menu { display: flex; gap: 8px; }
+        .nav-menu a {
+            text-decoration: none; color: var(--text-muted);
+            padding: 8px 16px; border-radius: 6px;
+            font-size: 14px; font-weight: 500;
+            transition: all 0.2s;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .nav-menu a:hover, .nav-menu a.active {
+            color: var(--info-color); background: #e6f7ff;
+        }
+        .nav-right {
+            display: flex; align-items: center; gap: 16px;
+            font-size: 13px; color: var(--text-muted);
+        }
+        .refresh-indicator i { animation: spin 2s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* 标题栏 */
+        .dashboard-header {
+            padding: 16px 30px;
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .dashboard-title {
+            font-size: 22px; font-weight: 600;
+            color: var(--text-main);
+            display: flex; align-items: center; gap: 12px;
+        }
+
+        /* 排序工具栏 */
+        .sort-toolbar {
+            padding: 0 30px; margin-bottom: 15px;
+            display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+        }
+        .sort-btn {
+            padding: 6px 12px; background: #fff;
+            border: 1px solid var(--border-hover);
+            border-radius: 6px; color: var(--text-muted);
+            cursor: pointer; font-size: 13px;
+            display: flex; align-items: center; gap: 6px;
+            transition: all 0.2s;
+        }
+        .sort-btn:hover, .sort-btn.active {
+            background: var(--info-color);
+            border-color: var(--info-color); color: #fff;
+        }
+        .refresh-btn {
+            padding: 6px 12px; background: var(--info-color);
+            border: none; border-radius: 6px;
+            color: #fff; cursor: pointer;
+            font-size: 13px; display: flex;
+            align-items: center; gap: 6px;
+        }
+        .refresh-btn:hover { background: #096dd9; }
+
+        /* 网格布局 */
+        .sites-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+            gap: 20px; padding: 20px 30px; flex: 1;
+        }
+
+        /* 卡片 */
+        .site-card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-hover);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+        }
+        .site-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+            border-color: #d0e4f5;
+        }
+        .site-card.api-error {
+            border: 2px solid var(--error-color);
+            box-shadow: 0 0 20px rgba(245, 34, 45, 0.3);
+            animation: pulse-error 2s infinite;
+        }
+        @keyframes pulse-error {
+            0%, 100% { box-shadow: 0 0 20px rgba(245, 34, 45, 0.3); }
+            50% { box-shadow: 0 0 30px rgba(245, 34, 45, 0.5); }
+        }
+        .site-card.offline { opacity: 0.6; filter: grayscale(0.5); }
+        .site-card.deleted { display: none; }
+
+        /* 卡片标题栏 - 修改 2: 添加删除按钮 */
+        .card-title-bar {
+            display: flex; justify-content: space-between;
+            align-items: center; padding: 10px 14px;
+            background: var(--hover-bg); border-bottom: 1px solid var(--border-color);
+        }
+        .card-title-left { display: flex; align-items: center; gap: 8px; }
+        .card-site-name {
+            font-size: 14px; font-weight: 600;
+            color: var(--text-main); cursor: pointer;
+        }
+        .card-site-name:hover { color: var(--info-color); }
+        .card-site-ip {
+            font-size: 13px; font-family: monospace;
+            color: var(--info-color);
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .card-site-ip:hover {
+            color: var(--text-main);
+            text-decoration: underline;
+        }
+        .old-card-site-ip {
+            font-size: 13px; font-family: monospace;
+            color: var(--text-muted);
+        }
+        .edit-name-btn {
+            background: transparent; border: none;
+            color: var(--text-muted); cursor: pointer;
+            font-size: 12px; padding: 4px;
+            border-radius: 4px; transition: all 0.2s;
+        }
+        .edit-name-btn:hover {
+            background: var(--info-color); color: #fff;
+        }
+        .delete-btn {
+            background: transparent; border: none;
+            color: var(--text-muted); cursor: pointer;
+            font-size: 14px; padding: 4px 8px;
+            border-radius: 4px; transition: all 0.2s;
+            margin-left: 8px;
+        }
+        .delete-btn:hover {
+            background: var(--error-bg); color: var(--error-color);
+        }
+        .api-error-badge {
+            background: var(--error-bg); color: var(--error-color);
+            font-size: 11px; padding: 2px 6px; border-radius: 4px;
+            font-weight: 600; display: none;
+        }
+        .site-card.api-error .api-error-badge { display: inline-block; }
+
+        /* 卡片头部数据 */
+        .card-header-stats {
+            display: grid; grid-template-columns: repeat(4, 1fr);
+            background: var(--hover-bg);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .stat-item {
+            padding: 12px 6px; text-align: center;
+            border-right: 1px solid var(--border-color);
+        }
+        .stat-item:last-child { border-right: none; }
+        .stat-item .label {
+            font-size: 12px; color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+        .stat-item .value {
+            font-size: 16px; font-weight: 600;
+            color: var(--text-main); font-family: monospace;
+        }
+        .stat-item.power .value { color: var(--info-color); }
+        .stat-item.hashrate .value { color: #722ed1; }
+
+        /* 卡片主体 */
+        .card-body {
+            display: flex; flex-direction: row;
+            min-height: 280px;
+        }
+        .body-left {
+            flex: 1; display: flex; flex-direction: column;
+            border-right: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+        .tabs {
+            display: flex; border-bottom: 1px solid var(--border-color);
+            background: #fafafa;
+        }
+        .tab-btn {
+            flex: 1; padding: 10px 4px; background: transparent;
+            border: none; color: var(--text-muted);
+            font-size: 14px; font-weight: 500; cursor: pointer;
+            border-bottom: 2px solid transparent; transition: 0.2s;
+        }
+        .tab-btn:hover { color: var(--info-color); }
+        .tab-btn.active {
+            color: var(--info-color);
+            border-bottom-color: var(--info-color);
+            background: #fff;
+        }
+        .tab-content {
+            padding: 14px; flex: 1; display: none;
+            flex-direction: column; gap: 10px;
+        }
+        .tab-content.active { display: flex; }
+        .section-title {
+            font-size: 12px; color: var(--text-muted);
+            font-weight: 600; margin-bottom: 4px;
+        }
+        .status-tags {
+            display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;
+        }
+        .tag {
+            font-size: 12px; padding: 4px 8px; border-radius: 4px;
+            background: var(--success-bg); border: 1px solid var(--success-border);
+            color: var(--success-color);
+            display: inline-flex; align-items: center; gap: 4px;
+        }
+        .metrics-bar {
+            display: flex; gap: 12px; background: var(--hover-bg);
+            padding: 10px; border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+        .metrics-bar div {
+            font-size: 13px; color: var(--text-muted);
+        }
+        .metrics-bar strong {
+            color: var(--text-main); font-size: 14px; margin-left: 4px;
+        }
+        .fault-grid {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 8px 12px;
+        }
+        .fault-item {
+            display: flex; justify-content: space-between;
+            align-items: center; font-size: 12px;
+            padding: 6px 8px; background: var(--hover-bg);
+            border-radius: 4px;
+        }
+        .status-ok { color: var(--success-color); font-weight: 600; }
+        .status-alarm { color: var(--error-color); font-weight: 600; }
+        .param-grid {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 6px 16px;
+        }
+        .param-item {
+            display: flex; justify-content: space-between;
+            align-items: center; font-size: 12px;
+            padding: 4px 0; border-bottom: 1px dashed var(--border-color);
+        }
+        .param-item span { color: var(--text-muted); }
+        .param-item strong {
+            color: var(--text-main); font-family: monospace;
+        }
+
+        /* 右侧控制面板 */
+        .body-right {
+            width: 140px; padding: 14px;
+            display: flex; flex-direction: column; gap: 12px;
+            background: #fafafa;
+        }
+        .control-btn {
+            background: #fff; border: 1px solid var(--border-hover);
+            color: var(--text-main); padding: 8px 10px;
+            border-radius: 6px; font-size: 13px; font-weight: 500;
+            cursor: pointer; display: flex;
+            justify-content: space-between; align-items: center;
+            transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+        }
+        .control-btn:hover {
+            border-color: var(--info-color); color: var(--info-color);
+        }
+        .control-btn .indicator {
+            width: 8px; height: 8px; border-radius: 50%;
+            border: 1px solid var(--border-hover); background: #eee;
+        }
+        .control-btn.btn-on:hover .indicator {
+            background: var(--success-color);
+            border-color: var(--success-color);
+        }
+        .control-btn.btn-off:hover .indicator {
+            background: var(--error-color);
+            border-color: var(--error-color);
+        }
+        .temp-control {
+            margin-top: auto; border-top: 1px dashed var(--border-hover);
+            padding-top: 12px;
+        }
+        .temp-label {
+            font-size: 12px; color: var(--text-muted);
+            margin-bottom: 6px; text-align: center;
+        }
+        .temp-target {
+            font-size: 20px; font-weight: bold;
+            color: var(--info-color); margin-bottom: 12px;
+            text-align: center;
+        }
+        .input-group { display: flex; gap: 4px; }
+        .input-group input {
+            width: 100%; min-width: 0; background: #fff;
+            border: 1px solid var(--border-hover);
+            color: var(--text-main); padding: 6px;
+            border-radius: 4px; text-align: center;
+            font-size: 13px; transition: border 0.2s;
+        }
+        .input-group input:focus {
+            outline: none; border-color: var(--info-color);
+        }
+        .input-group button {
+            background: var(--info-color); color: #fff; border: none;
+            padding: 6px 10px; border-radius: 4px;
+            cursor: pointer; font-size: 12px; transition: 0.2s;
+        }
+        .input-group button:hover { background: #096dd9; }
+    /* ================= 维护状态相关样式 ================= */
+/* 维护中卡片整体变黄 */
+.site-card.maintenance {
+    border: 2px solid var(--warning-color);
+    background-color: #fffbe6; /* 淡黄底色 */
+}
+
+/* 维护中卡片的标题栏颜色加深 */
+.site-card.maintenance .card-title-bar {
+    background-color: #ffe58f;
+    border-bottom: 1px solid #ffd666;
+}
+
+/* 状态标签变为维护样式 */
+.site-status.site-maintenance {
+    background-color: #fff1b8;
+    color: #d46b08;
+    border: 1px solid #ffd666;
+}
+
+/* 标题栏按钮通用样式 */
+.title-action-btn {
+    background: transparent;
+    border: 1px solid var(--border-hover);
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+    margin-right: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* 维护按钮 - 黄色标签样式 */
+.btn-maintain {
+    background: #fff1b8;
+    color: #d46b08;
+    border: 1px solid #ffd666;
+    font-weight: 600;
+}
+.btn-maintain:hover {
+    background: #ffd666;
+    color: #d46b08;
+    border-color: #d46b08;
+}
+
+/* 恢复运行按钮 */
+.btn-resume {
+    color: var(--success-color);
+    border-color: var(--success-border);
+    background: var(--success-bg);
+}
+
+.btn-resume:hover {
+    background: var(--success-color);
+    color: #fff;
+}
+    </style>
+</head>
+<body>
+    <!-- 全局导航栏 - 修改 1: 背景色改为 var(--bg-color) -->
+    <nav class="global-nav">
+        <div class="nav-container">
+            <div class="nav-left">
+                <a href="/" class="nav-logo">
+                    <i class="fas fa-cube"></i>
+                    <span>AntBox 监控</span>
+                </a>
+                <div class="nav-menu">
+                    <a href="/"><i class="fas fa-chart-line"></i> 总览</a>
+                    <a href="/pages/quanzhan.html" class="active"><i class="fas fa-server"></i> 站点实时数据</a>
+                    <a href="/pages/saomiao.html"><i class="fas fa-radar"></i> 站点扫描</a>
+                    <a href="/pages/jiankongqiang.html"><i class="fas fa-tv"></i> 监控墙</a>
+                    <a href="/pages/water.html"><i class="fas fa-tint"></i> 用水管理</a>
+                    <a href="/login.html"><i class="fas fa-user-cog"></i> 账号管理</a>
+                </div>
+            </div>
+            <div class="nav-right">
+                <div class="refresh-indicator">
+                    <i class="fas fa-sync-alt"></i>
+                    <span id="lastUpdate">上次采集：--:--:--</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <header class="dashboard-header">
+        <div class="dashboard-title">
+            <i class="fas fa-desktop" style="color: var(--info-color);"></i> 蚂蚁水冷系统数据监控
+        </div>
+        <div style="display: flex; gap: 15px; align-items: center;">
+            <div style="font-size: 13px; color: var(--text-muted);">
+                <i class="fas fa-clock"></i> 自动刷新 (60 秒)
+            </div>
+            <button class="refresh-btn" onclick="loadSites()"><i class="fas fa-sync-alt"></i> 刷新</button>
+        </div>
+    </header>
+
+    <!-- 排序工具栏 -->
+    <div class="sort-toolbar">
+        <span style="color: var(--text-muted); font-size: 13px;"><i class="fas fa-sort"></i> 排序:</span>
+        <button class="sort-btn active" onclick="sortSites('default')"><i class="fas fa-list"></i> 默认</button>
+        <button class="sort-btn" onclick="sortSites('name')"><i class="fas fa-font"></i> 名称</button>
+        <button class="sort-btn" onclick="sortSites('ip')"><i class="fas fa-globe"></i> IP 地址</button>
+        <button class="sort-btn" onclick="sortSites('power')"><i class="fas fa-bolt"></i> 总功耗</button>
+        <button class="sort-btn" onclick="sortSites('hashrate')"><i class="fas fa-tachometer-alt"></i> 算力</button>
+    </div>
+
+    <div class="sites-grid" id="sitesGrid"></div>
+
+    <script>
+        // 全局变量
+        let allSites = [];
+        let currentSort = 'default';
+        let siteNames = JSON.parse(localStorage.getItem('siteNames') || '{}');
+        let offlineCounters = JSON.parse(localStorage.getItem('offlineCounters') || '{}');
+        let deletedIPs = JSON.parse(localStorage.getItem('deletedIPs') || '[]');
+
+        // 保存自定义名称
+        function saveSiteName(ip, name) {
+            siteNames[ip] = name;
+            localStorage.setItem('siteNames', JSON.stringify(siteNames));
+            renderSites();
+        }
+
+        // 编辑名称
+        function editSiteName(ip) {
+            const currentName = siteNames[ip] || 'AntBox';
+            const newName = prompt('请输入自定义名称:', currentName);
+            if (newName && newName.trim()) {
+                saveSiteName(ip, newName.trim());
+            }
+        }
+
+        // 删除卡片
+        function deleteCard(ip) {
+            if (confirm('确定要删除站点 ' + ip + ' 吗？\n\n删除后：\n• 该站点将不再显示\n• 不再采集该站点数据\n• 历史数据保留\n• 可重新添加相同 IP')) {
+                if (!deletedIPs.includes(ip)) {
+                    deletedIPs.push(ip);
+                    localStorage.setItem('deletedIPs', JSON.stringify(deletedIPs));
+                    renderSites();
+                }
+            }
+        }
+
+        // 从 API 加载数据
+        async function loadSites() {
+            try {
+                console.log('[DEBUG] 开始加载站点数据...');
+                const response = await fetch('/api/sites?limit=500');
+                const data = await response.json();
+                allSites = data;
+                console.log('[DEBUG] 加载站点数:', allSites.length);
+                console.log('[DEBUG] deletedIPs:', deletedIPs);
+
+                // 更新离线计数器
+                allSites.forEach(site => {
+                    const ip = site.ip_address;
+                    const hasData = site.total_power !== null && site.total_power > 0;
+                    if (hasData) {
+                        offlineCounters[ip] = { count: 0 };
+                    } else {
+                        if (!offlineCounters[ip]) offlineCounters[ip] = { count: 0 };
+                        offlineCounters[ip].count = Math.min(offlineCounters[ip].count + 1, 3);
+                    }
+                });
+                localStorage.setItem('offlineCounters', JSON.stringify(offlineCounters));
+
+                updateLastUpdateTime();
+                renderSites();
+            } catch (error) {
+                console.error('加载失败:', error);
+            }
+        }
+
+        // 更新时间显示
+        function updateLastUpdateTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('zh-CN', { hour12: false });
+            document.getElementById('lastUpdate').textContent = '上次采集：' + timeStr;
+        }
+
+        // 排序
+        function sortSites(sortType) {
+            currentSort = sortType;
+            document.querySelectorAll('.sort-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.onclick.toString().includes(sortType));
+            });
+
+            if (sortType === 'name') {
+                allSites.sort((a, b) => {
+                    const nameA = siteNames[a.ip_address] || 'AntBox';
+                    const nameB = siteNames[b.ip_address] || 'AntBox';
+                    return nameA.localeCompare(nameB, 'zh-CN');
+                });
+            } else if (sortType === 'ip') {
+                // 按 IP 地址数值排序 (优先比较前两个八位组)
+                allSites.sort((a, b) => {
+                    const partsA = a.ip_address.split('.').map(Number);
+                    const partsB = b.ip_address.split('.').map(Number);
+                    // 先比较第一段
+                    if (partsA[0] !== partsB[0]) return partsA[0] - partsB[0];
+                    // 再比较第二段
+                    if (partsA[1] !== partsB[1]) return partsA[1] - partsB[1];
+                    // 然后第三段
+                    if (partsA[2] !== partsB[2]) return partsA[2] - partsB[2];
+                    // 最后第四段
+                    return partsA[3] - partsB[3];
+                });
+            } else if (sortType === 'power') {
+                allSites.sort((a, b) => (b.total_power || 0) - (a.total_power || 0));
+            } else if (sortType === 'hashrate') {
+                allSites.sort((a, b) => (b.total_hashrate || 0) - (a.total_hashrate || 0));
+            }
+            renderSites();
+        }
+
+        // 生成卡片 HTML
+        function createCardHTML(site) {
+            const ip = site.ip_address;
+            const isOnline = site.is_online;
+            const apiError = offlineCounters[ip] && offlineCounters[ip].count >= 3;
+            const customName = siteNames[ip] || 'AntBox';
+            const power = site.total_power ? site.total_power.toFixed(2) : '0.00';  // kW
+            const hashrate = site.total_hashrate ? (site.total_hashrate / 1000).toFixed(3) : '0.000';  // TH/s → PH/s
+            const minerCount = site.miner_count || 0;
+            const supplyTemp = site.supply_temp ? site.supply_temp.toFixed(1) : '-';
+            const returnTemp = site.return_temp ? site.return_temp.toFixed(1) : '-';
+            const deltaTemp = (supplyTemp !== '-' && returnTemp !== '-') ? (parseFloat(returnTemp) - parseFloat(supplyTemp)).toFixed(1) : '-';
+
+            let cardClass = 'site-card';
+            const isMaintenance = site.maintenance_status || false;
+            if (isMaintenance) cardClass += ' maintenance';
+            else if (apiError) cardClass += ' api-error';
+            else if (!isOnline) cardClass += ' offline';
+
+            return `
+            <div class="${cardClass}" data-ip="${ip}">
+                <div class="card-title-bar">
+                    <div class="card-title-left">
+                        <i class="fas fa-server" style="color: var(--info-color);"></i>
+                        <span class="card-site-name" onclick="editSiteName('${ip}')" title="点击修改名称">${customName}</span>
+                        <button class="edit-name-btn" onclick="editSiteName('${ip}')" title="修改名称"><i class="fas fa-edit"></i></button>
+                    </div>
+                    <div class="card-title-right">
+                        <button class="title-action-btn btn-resume" onclick="resumeDevice(this, '${ip}')" style="${isMaintenance ? 'display:inline-flex;' : 'display:none;'}"><i class="fas fa-play-circle"></i> 恢复</button>
+                        <button class="title-action-btn btn-maintain" onclick="maintainDevice(this, '${ip}')" style="${isMaintenance ? 'display:none;' : 'display:inline-flex;'}"><i class="fas fa-tools"></i> 维护</button>
+                        <span class="api-error-badge"><i class="fas fa-exclamation-triangle"></i> API 异常</span>
+                        <a href="http://${ip}/" target="_blank" class="card-site-ip" title="访问 ${ip} Web 界面"><i class="fas fa-globe"></i> ${ip}</a>
+                        <button class="delete-btn" onclick="deleteCard('${ip}')" title="删除此站点"><i class="fas fa-times"></i></button>
+                    </div>
+                </div>
+
+                <div class="card-header-stats">
+                    <div class="stat-item power"><div class="label">总功耗</div><div class="value">${power} kW</div></div>
+                    <div class="stat-item"><div class="label">在线矿机</div><div class="value">${minerCount} 台</div></div>
+                    <div class="stat-item"><div class="label">供水温度</div><div class="value">${supplyTemp !== '-' ? supplyTemp + ' °C' : '无数据'}</div></div>
+                    <div class="stat-item hashrate"><div class="label">实时算力</div><div class="value">${hashrate} PH/s</div></div>
+                </div>
+
+                <div class="card-body">
+                    <div class="body-left">
+                        <div class="tabs">
+                            <button class="tab-btn active" onclick="switchTab(this, 'status-${ip}')">运行状态</button>
+                            <button class="tab-btn" onclick="switchTab(this, 'fault-${ip}')">故障状态</button>
+                            <button class="tab-btn" onclick="switchTab(this, 'params-${ip}')">运行参数</button>
+                        </div>
+
+                        <div id="status-${ip}" class="tab-content active">
+                            <div class="section-title">冷却系统运行状态</div>
+                            <div class="status-tags">
+                                ${site.circulating_pump ? '<span class="tag"><i class="fas fa-check-circle"></i> 循环泵运行</span>' : ''}
+                                ${site.fan1 ? '<span class="tag"><i class="fas fa-check-circle"></i> 风扇 1 运行</span>' : ''}
+                                ${site.fan2 ? '<span class="tag"><i class="fas fa-check-circle"></i> 风扇 2 运行</span>' : ''}
+                                ${site.spray_pump ? '<span class="tag"><i class="fas fa-check-circle"></i> 喷淋泵运行</span>' : ''}
+                            </div>
+                            <div style="margin-top: auto;">
+                                <div class="metrics-bar">
+                                    <div>在线矿机：<strong>${minerCount} 台</strong></div>
+                                    <div style="width: 1px; background: var(--border-color); margin: 0 4px;"></div>
+                                    <div>矿机平均温度：<strong style="color: ${site.avg_miner_temp && site.avg_miner_temp > 70 ? 'var(--error-color)' : 'var(--text-main)'};">${site.avg_miner_temp ? site.avg_miner_temp.toFixed(1) + ' °C' : '无数据'}</strong></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="fault-${ip}" class="tab-content">
+                            <div class="fault-grid">
+                                <div class="fault-item"><span>电源故障</span><span class="${site.power_fault ? 'status-alarm' : 'status-ok'}">${site.power_fault ? '异常' : '正常'}</span></div>
+                                <div class="fault-item"><span>液位低</span><span class="${site.liquid_level_low ? 'status-alarm' : 'status-ok'}">${site.liquid_level_low ? '异常' : '正常'}</span></div>
+                                <div class="fault-item"><span>漏液故障</span><span class="${site.leakage_fault ? 'status-alarm' : 'status-ok'}">${site.leakage_fault ? '异常' : '正常'}</span></div>
+                                <div class="fault-item"><span>供液温度高</span><span class="${site.supply_liquid_temp_high ? 'status-alarm' : 'status-ok'}">${site.supply_liquid_temp_high ? '异常' : '正常'}</span></div>
+                                <div class="fault-item"><span>供液压力高</span><span class="${site.power_fault ? 'status-alarm' : 'status-ok'}">${site.power_fault ? '异常' : '正常'}</span></div>
+                                <div class="fault-item"><span>回液压力低</span><span class="${site.supply_liquid_flow_low ? 'status-alarm' : 'status-ok'}">${site.supply_liquid_flow_low ? '异常' : '正常'}</span></div>
+                                <div class="fault-item"><span>供液流量低</span><span class="${site.supply_liquid_flow_low ? 'status-alarm' : 'status-ok'}">${site.supply_liquid_flow_low ? '异常' : '正常'}</span></div>
+                                <div class="fault-item"><span>冷塔液位低</span><span class="${site.liquid_level_low ? 'status-alarm' : 'status-ok'}">${site.liquid_level_low ? '异常' : '正常'}</span></div>
+                            </div>
+                        </div>
+
+                        <div id="params-${ip}" class="tab-content">
+                            <div class="section-title">冷却系统运行参数</div>
+                            <div class="param-grid">
+                                <div class="param-item"><span>供水温度</span><strong>${supplyTemp !== '-' ? supplyTemp + ' °C' : '无数据'}</strong></div>
+                                <div class="param-item"><span>回水温度</span><strong>${returnTemp !== '-' ? returnTemp + ' °C' : '无数据'}</strong></div>
+                                <div class="param-item"><span>水流</span><strong>${site.flow_rate ? site.flow_rate.toFixed(1) + ' L/min' : '无数据'}</strong></div>
+                                <div class="param-item"><span>压力</span><strong>${site.pressure ? site.pressure.toFixed(2) + ' bar' : '无数据'}</strong></div>
+                                <div class="param-item"><span>温差</span><strong>${deltaTemp !== '-' ? deltaTemp + ' °C' : '无数据'}</strong></div>
+                                <div class="param-item"><span>总功耗</span><strong>${power !== '0.00' ? power + ' kW' : '无数据'}</strong></div>
+                                <div class="param-item"><span>算力</span><strong>${hashrate !== '0.000' ? hashrate + ' PH/s' : '无数据'}</strong></div>
+                                <div class="param-item"><span>矿机数量</span><strong>${minerCount} 台</strong></div>
+                                <div class="param-item"><span>矿机温度</span><strong>${site.avg_miner_temp ? site.avg_miner_temp.toFixed(1) + ' °C' : '无数据'}</strong></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="body-right">
+                        <button class="control-btn btn-on" onclick="toggleDevice('${ip}', true)">启动 <span class="indicator"></span></button>
+                        <button class="control-btn btn-off" onclick="toggleDevice('${ip}', false)">停止 <span class="indicator"></span></button>
+                        <button class="control-btn" onclick="resetDevice('${ip}')">复位 <i class="fas fa-redo-alt" style="font-size:12px; color: var(--text-muted);"></i></button>
+                        <div class="temp-control">
+                            <div class="temp-label">供液温度目标</div>
+                            <div class="temp-target">${supplyTemp !== '-' ? supplyTemp : '35'} °C</div>
+                            <div class="temp-label">设置目标温度</div>
+                            <div class="input-group">
+                                <input type="number" id="temp-input-${ip}" value="35" min="20" max="50">
+                                <button title="下发" onclick="setTemp('${ip}')"><i class="fas fa-check"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        // 标签切换
+        window.switchTab = function(btn, targetId) {
+            const card = btn.closest('.site-card');
+            card.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            card.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById(targetId).classList.add('active');
+        };
+
+        function toggleDevice(ip, enable) { alert('控制：' + ip + (enable ? ' 启动' : ' 停止')); }
+        function resetDevice(ip) { alert('复位：' + ip); }
+        function setTemp(ip) {
+            const temp = document.getElementById('temp-input-' + ip).value;
+            alert('温度设定：' + ip + ' → ' + temp + '°C');
+        }
+
+        function renderSites() {
+            const grid = document.getElementById('sitesGrid');
+            console.log('[DEBUG] renderSites called, allSites:', allSites ? allSites.length : 0);
+            if (!allSites || allSites.length === 0) {
+                grid.innerHTML = '<div style="color: var(--text-muted); padding: 40px; text-align: center;">暂无站点数据</div>';
+                return;
+            }
+
+            // 过滤已删除的 IP
+            const visibleSites = allSites.filter(site => !deletedIPs.includes(site.ip_address));
+            console.log('[DEBUG] visibleSites:', visibleSites.length, 'deletedIPs count:', deletedIPs.length);
+            
+            if (visibleSites.length === 0) {
+                grid.innerHTML = '<div style="color: var(--text-muted); padding: 40px; text-align: center;"><i class="fas fa-inbox" style="font-size: 48px; margin-bottom: 16px;"></i><p>所有站点已删除</p><p style="font-size: 13px; margin-top: 8px;">刷新页面或重新添加站点</p></div>';
+                return;
+            }
+
+            grid.innerHTML = visibleSites.map(site => createCardHTML(site)).join('');
+        }
+
+        // 页面加载
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSites();
+            setInterval(loadSites, 60000);
+        });
+
+// ================= 维护状态逻辑 =================
+        
+        // 1. 手动将设备置为【维护状态】
+        function maintainDevice(btnElement, ip) {
+            const card = btnElement.closest('.site-card');
+            card.classList.add('maintenance');
+            btnElement.style.display = 'none';
+            card.querySelector('.btn-resume').style.display = 'inline-flex';
+            const statusBadge = card.querySelector('.site-status');
+            if(statusBadge) {
+                statusBadge.className = 'site-status site-maintenance';
+                statusBadge.innerHTML = '<i class="fas fa-tools" style="font-size:8px"></i> 维护中';
+            }
+            updateMaintenanceStatus(ip, true);
+            recalculateDashboardStats();
+        }
+
+        // 2. 手动将设备【恢复运行】
+        function resumeDevice(btnElement, ip) {
+            const card = btnElement.closest('.site-card');
+            card.classList.remove('maintenance');
+            btnElement.style.display = 'none';
+            card.querySelector('.btn-maintain').style.display = 'inline-flex';
+            const statusBadge = card.querySelector('.site-status');
+            if(statusBadge) {
+                statusBadge.className = 'site-status site-online';
+                statusBadge.innerHTML = '<i class="fas fa-circle" style="font-size:8px"></i> 在线';
+            }
+            updateMaintenanceStatus(ip, false);
+            recalculateDashboardStats();
+        }
+
+        // 3. 更新数据库维护状态
+        async function updateMaintenanceStatus(ip, isMaintenance) {
+            try {
+                await fetch('/api/sites/' + encodeURIComponent(ip) + '/maintenance', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ maintenance_status: isMaintenance })
+                });
+            } catch (error) {
+                console.error('更新维护状态失败:', error);
+            }
+        }
+
+        // 4. 自动检测异常设备并转入维护
+        function autoCheckMaintenance() {
+            const cards = document.querySelectorAll('.site-card');
+            cards.forEach(card => {
+                if (card.classList.contains('maintenance')) return;
+                const powerEl = card.querySelector('.stat-item.power .value');
+                const hashrateEl = card.querySelector('.stat-item.hashrate .value');
+                const statusBadge = card.querySelector('.site-status');
+                if (!powerEl || !hashrateEl || !statusBadge) return;
+                const powerText = powerEl.innerText;
+                const hashrateText = hashrateEl.innerText;
+                const statusHTML = statusBadge.innerHTML;
+                const power = parseFloat(powerText.replace(/[^0-9.]/g, '')) || 0;
+                const hashrate = parseFloat(hashrateText.replace(/[^0-9.]/g, '')) || 0;
+                const isOnline = statusHTML.includes('在线');
+                if (power === 0 && hashrate === 0 && isOnline) {
+                    const maintainBtn = card.querySelector('.btn-maintain');
+                    if(maintainBtn) maintainDevice(maintainBtn, card.dataset.ip);
+                }
+            });
+        }
+
+        // 5. 动态重新统计主页 KPI 数据 (过滤掉维护设备)
+        function recalculateDashboardStats() {
+            const activeCards = document.querySelectorAll('.site-card:not(.deleted):not(.maintenance)');
+            let totalPower = 0, totalHashrate = 0, onlineCount = 0, sumTemp = 0, validTempCount = 0;
+            activeCards.forEach(card => {
+                const statusBadge = card.querySelector('.site-status');
+                if (!statusBadge) return;
+                const isOnline = statusBadge.innerHTML.includes('在线');
+                if (isOnline) {
+                    onlineCount++;
+                    const powerEl = card.querySelector('.stat-item.power .value');
+                    const hashrateEl = card.querySelector('.stat-item.hashrate .value');
+                    if (powerEl) totalPower += parseFloat(powerEl.innerText.replace(/[^0-9.]/g, '')) || 0;
+                    if (hashrateEl) totalHashrate += parseFloat(hashrateEl.innerText.replace(/[^0-9.]/g, '')) || 0;
+                    const tempEls = card.querySelectorAll('.stat-item .value');
+                    if (tempEls.length >= 3) {
+                        const temp = parseFloat(tempEls[2].innerText.replace(/[^0-9.]/g, ''));
+                        if (!isNaN(temp)) { sumTemp += temp; validTempCount++; }
+                    }
+                }
+            });
+            const powerEl = document.getElementById('total-power');
+            const hashrateEl = document.getElementById('total-hashrate');
+            const onlineEl = document.getElementById('online-sites');
+            const tempEl = document.getElementById('avg-temp');
+            if(powerEl) powerEl.innerHTML = totalPower.toFixed(2) + ' <span class="kpi-unit">kW</span>';
+            if(hashrateEl) hashrateEl.innerHTML = totalHashrate.toFixed(3) + ' <span class="kpi-unit">PH/s</span>';
+            if(onlineEl) onlineEl.innerHTML = onlineCount + ' <span class="kpi-unit">台</span>';
+            if(tempEl && validTempCount > 0) tempEl.innerHTML = (sumTemp / validTempCount).toFixed(1) + ' <span class="kpi-unit">°C</span>';
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            autoCheckMaintenance();
+        });
+    </script>
+
+</body>
+</html>
