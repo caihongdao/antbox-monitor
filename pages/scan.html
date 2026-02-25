@@ -77,6 +77,30 @@
             border-color: #1890ff;
             box-shadow: 0 2px 6px rgba(24, 144, 255, 0.4);
         }
+        
+        /* 扫描结果 IP 超链接样式 */
+        .scan-ip-link {
+            color: #1890ff;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+        .scan-ip-link:hover {
+            background: #e6f7ff;
+            color: #096dd9;
+            text-decoration: underline;
+        }
+        .scan-ip-link i {
+            font-size: 10px;
+            opacity: 0.7;
+        }
+        .scan-ip-link:hover i {
+            opacity: 1;
+        }
         .header-right {
             display: flex;
             align-items: center;

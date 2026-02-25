@@ -824,7 +824,12 @@ class SiteScanner {
         row.innerHTML = `
             <td><input type="checkbox" class="result-checkbox" value="${result.ip}"></td>
             <td><i class="fas ${statusIcon}" style="color: ${statusColor};" title="${statusText}"></i></td>
-            <td><strong>${result.ip}</strong><br><small>:${result.port}</small>${pingStatus}</td>
+            <td>
+                <a href="http://${result.ip}/" target="_blank" class="scan-ip-link" title="访问 ${result.ip} Web 界面">
+                    <i class="fas fa-external-link-alt"></i> <strong>${result.ip}</strong>
+                </a>
+                <br><small>:${result.port}</small>${pingStatus}
+            </td>
             <td><i class="fas ${typeIcon}" style="color: ${typeColor};"></i> ${typeText}</td>
             <td>${result.ping && result.ping.latency ? `${result.ping.latency.toFixed(1)}ms` : '-'}</td>
             <td>${infoText}${pingInfo}</td>

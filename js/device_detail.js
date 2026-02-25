@@ -178,7 +178,14 @@ class DeviceDetailManager {
                                    this.deviceData.status === 'offline' ? '离线' : '未知';
         
         // 更新基本信息
-        document.getElementById('device-ip').textContent = this.deviceData.ip || '-';
+        const ipElement = document.getElementById('device-ip');
+        if (this.deviceData.ip) {
+            ipElement.innerHTML = `<a href="http://${this.deviceData.ip}/" target="_blank" class="detail-ip-link" title="访问 ${this.deviceData.ip} Web 界面">
+                <i class="fas fa-external-link-alt"></i> ${this.deviceData.ip}
+            </a>`;
+        } else {
+            ipElement.textContent = '-';
+        }
         document.getElementById('device-port').textContent = this.deviceData.port || '80';
         
         const deviceType = this.deviceData.deviceType || 'unknown';

@@ -95,7 +95,12 @@ class MonitorWall {
             const cardHtml = `
                 <div class="site-card ${cardClass}">
                     <div class="card-header">
-                        <span>${site.name || site.ip_address}</span>
+                        ${site.ip_address 
+                            ? `<a href="http://${site.ip_address}/" target="_blank" class="card-ip-link" title="访问 ${site.ip_address} Web 界面">
+                                <i class="fas fa-external-link-alt"></i> ${site.name || site.ip_address}
+                               </a>`
+                            : `<span>${site.name || '未知设备'}</span>`
+                        }
                         <i class="fas ${isOnline ? 'fa-check-circle' : 'fa-times-circle'}" 
                            style="color: var(--${isOnline ? 'success' : 'error'}-color);"></i>
                     </div>
