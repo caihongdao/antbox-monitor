@@ -81,3 +81,80 @@ api_server.py.backup*
 *.crt
 secrets.json
 credentials.json
+
+# API keys and passwords
+API_KEYS_TABLE.md
+MY_AI_MODELS.md
+*config*.json
+*password*
+*passwd*
+*secret*
+KEYS.md
+
+# Personal data and logs
+memory/
+*.log
+logs/
+test_results/
+*.tmp
+*.backup*
+*.old
+
+# IDE and editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.tox/
+.coverage
+htmlcov/
+
+# Node modules
+node_modules/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment
+.env
+.venv
+.env.local
+
+# Build artifacts
+*.tar.gz
+*.zip
+
+# OS specific
+.DS_Store
+Thumbs.db

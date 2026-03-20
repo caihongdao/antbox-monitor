@@ -1,389 +1,259 @@
-# AntBox 矿机冷却系统监控平台
+# AntBox Monitor - 矿机冷却系统监控平台
 
-<div align="center">
+一个基于 FastAPI + PostgreSQL + Redis 的矿机冷却系统监控平台，用于监控 AntBox 设备的运行状态、温度、功耗等关键指标。
 
-![FastAPI](https://img.shields.io/badge/FastAPI-0.109.0-009688?style=flat&logo=fastapi)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?style=flat&logo=postgresql)
-![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat&logo=python)
-![License](https://img.shields.io/badge/License-MIT-blue?style=flat)
+## 项目特点
 
-**一站式矿机冷却系统监控解决方案**
+- **实时监控**: 监控 150+ 矿机站点，60秒采集周期
+- **前端面板**: 响应式 Web 界面，支持实时监控和历史趋势
+- **设备扫描**: 自动扫描和识别 AntBox/矿机设备
+- **Ping 检测**: 集成网络连通性检测
+- **数据存储**: PostgreSQL + TimescaleDB + Redis 多层存储
+- **告警系统**: 根据温度、功耗、算力等指标触发告警
 
-[功能特性](#-功能特性) • [快速开始](#-快速开始) • [API 文档](#-api-文档) • [系统架构](#-系统架构) • [部署指南](#-部署指南)
-
-</div>
-
----
-
-## 📖 项目简介
-
-AntBox 矿机冷却系统监控平台是一个高性能、分布式的工业级监控系统，专为大规模矿机冷却基础设施设计。系统支持 **150+ 站点** 的实时数据采集、智能分析和可视化展示，采集延迟 **< 5 秒**，API 响应时间 **< 200ms**。
-
-### 🎯 核心能力
-
-- **实时数据采集**：异步并发扫描 150 个站点，单轮采集耗时 ~5.6 秒
-- **智能设备识别**：BTCTools 级别的网络嗅探，精准识别 AntBox/矿机设备
-- **多维度监控**：温度、功耗、算力、网络状态全方位监控
-- **自动预警**：基于规则的报警引擎，支持 Telegram/微信推送
-- **可视化大屏**：监控墙、仪表盘、趋势图表，数据一目了然
-
----
-
-## ✨ 功能特性
-
-### 📊 数据采集层
-
-| 功能 | 描述 | 状态 |
-|------|------|------|
-| 异步 HTTP 并发扫描 | 基于 aiohttp + asyncio 的高性能采集器 | ✅ |
-| CGMiner API 嗅探 | 通过 4028 端口提取算力/温度数据 | ✅ |
-| Ping 检测系统 | 跨平台网络连通性测试，支持批量检测 | ✅ |
-| 断点续采 | 采集失败自动重试，数据完整性保障 | ✅ |
-
-### 🔌 API 服务层
-
-| 端点 | 功能 | 认证 |
-|------|------|------|
-| `GET /api/health` | 健康检查 | 无 |
-| `GET /api/dashboard/overview` | 仪表盘总览数据 | 无 |
-| `GET /api/sites` | 站点列表查询 | 无 |
-| `GET /api/trend/{metric}` | 历史趋势数据 | 无 |
-| `POST /api/ping` | 单个设备 Ping 检测 | 无 |
-| `POST /api/ping/batch` | 批量设备 Ping 检测 | 无 |
-| `POST /api/scan/start` | 启动网络扫描任务 | 无 |
-| `GET /api/scan/status` | 获取扫描任务状态 | 无 |
-| `POST /api/scan/stop` | 停止扫描任务 | 无 |
-
-### 🖥️ 前端页面
-
-| 页面 | 访问路径 | 功能 |
-|------|----------|------|
-| 主仪表盘 | `/dashboard.html` | 系统总览、关键指标、告警统计 |
-| 站点扫描 | `/pages/scan.html` | IP 范围扫描、设备识别、批量导入 |
-| 设备详情 | `/pages/device_detail.html` | 设备信息、Ping 历史、端口扫描 |
-| 监控墙 | `/monitor-wall.html` | 大屏展示、实时告警、热力图 |
-| 全部站点 | `/pages/all_sites.html` | 150 站点列表、状态筛选、批量操作 |
-
-### 🚨 告警系统
-
-- **温度告警**：供液/回液温度超限
-- **功耗告警**：总功耗异常波动
-- **算力告警**：算力低于阈值
-- **网络告警**：设备离线、丢包率超标
-- **推送渠道**：Telegram、微信（可配置）
-
----
-
-## 🏗️ 系统架构
+## 系统架构
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    数据源层 (150 个站点)                      │
-│   AntBox 冷却系统 | 矿机设备 | 网络基础设施                   │
-└─────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────┐
-│                    采集与控制层                              │
-│   aiohttp + asyncio + FastAPI + 任务调度器                  │
-│   • 异步 HTTP 并发扫描    • CGMiner API 嗅探                 │
-│   • Ping 检测系统         • 数据采集后台任务                  │
-└─────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────┐
-│                    数据处理层                                │
-│   解析 | 验证 | 告警 | 聚合 | 缓存 (Redis)                   │
-└─────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────┐
-│                    数据存储层                                │
-│   PostgreSQL 16 (主库) + TimescaleDB (时序优化)             │
-│   Redis 7.0.15 (缓存/会话)                                  │
-└─────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────┐
-│                    应用服务层                                │
-│   RESTful API | WebSocket | 认证授权 | 告警引擎              │
-└─────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────┐
-│                    前端展示层                                │
-│   管理仪表盘 | 大屏监控 | 移动端 | 控制面板                  │
-└─────────────────────────────────────────────────────────────┘
+数据源层 (150个 AntBox 站点)
+    ↓
+采集与控制层 (FastAPI + aiohttp + asyncio)
+    ↓
+数据处理层 (解析、验证、告警、聚合)
+    ↓
+数据存储层 (PostgreSQL + TimescaleDB + Redis)
+    ↓
+应用服务层 (RESTful API + WebSocket)
+    ↓
+前端展示层 (Web 仪表盘 + 监控大屏)
 ```
 
----
+## 技术栈
 
-## 🚀 快速开始
+- **后端**: Python 3.10+, FastAPI, PostgreSQL, Redis
+- **前端**: HTML5, CSS3, JavaScript (原生)
+- **部署**: systemd, Docker (可选)
+- **协议**: RESTful API, WebSocket
+
+## 主要功能
+
+### 1. 站点扫描
+- IP 范围扫描
+- AntBox/矿机自动识别
+- 批量导入站点
+- Ping 检测集成
+
+访问地址: `/pages/scan.html`
+
+### 2. 设备详情
+- 设备信息展示
+- Ping 历史图表
+- 端口扫描
+- 实时状态更新
+
+访问地址: `/pages/device_detail.html?id={设备IP}`
+
+### 3. 监控大屏
+- 实时数据总览
+- 关键指标监控
+- 告警状态展示
+
+访问地址: `/pages/monitor-wall.html`
+
+### 4. 视频监控
+- 多路视频流监控
+- HLS/RTSP 支持
+- 自动重连
+
+访问地址: `/pages/jiankongqiang.html`
+
+## API 端点
+
+```
+GET  /api/health              - 健康检查
+GET  /api/dashboard/overview  - 仪表盘总览
+GET  /api/sites               - 站点列表
+POST /api/ping                - 单个设备 Ping 检测
+POST /api/ping/batch          - 批量设备 Ping 检测
+GET  /api/trend/{metric}      - 趋势数据
+POST /api/scan/start          - 开始扫描
+GET  /api/scan/status         - 扫描状态
+POST /api/scan/stop           - 停止扫描
+```
+
+## 快速开始
 
 ### 环境要求
 
-- **操作系统**：Ubuntu 20.04+ / Debian 11+
-- **Python**：3.10+
-- **数据库**：PostgreSQL 16+
-- **缓存**：Redis 7.0+
-- **内存**：≥ 4GB
-- **存储**：≥ 20GB
+- Python 3.10+
+- PostgreSQL 16+
+- Redis 7.0+
+- Node.js 16+ (前端构建)
 
-### 1. 安装依赖
+### 安装步骤
 
+1. 克隆项目
 ```bash
-# 克隆项目
-git clone https://github.com/YOUR_USERNAME/antbox-monitor.git
+git clone https://github.com/caihongdao/antbox-monitor.git
 cd antbox-monitor
+```
 
-# 创建虚拟环境
-python3 -m venv venv
-source venv/bin/activate
-
-# 安装 Python 依赖
+2. 安装依赖
+```bash
 pip install -r requirements.txt
 ```
 
-### 2. 配置数据库
-
+3. 配置数据库
 ```bash
-# 创建数据库和用户
-sudo -u postgres psql << EOF
-CREATE DATABASE antmonitor_db;
-CREATE USER antmonitor WITH PASSWORD 'antmonitor2024';
-GRANT ALL PRIVILEGES ON DATABASE antmonitor_db TO antmonitor;
-EOF
+# 创建 PostgreSQL 数据库
+createdb antmonitor_db
 
-# 导入数据库 Schema
-psql -U antmonitor -d antmonitor_db -f database_schema.sql
+# 执行数据库迁移
+# (根据实际配置文件)
 ```
 
-### 3. 配置站点
+4. 配置 Redis
+```bash
+# 确保 Redis 服务已启动
+redis-server
+```
 
-编辑 `config/all_sites.json`：
+5. 配置应用
+```bash
+cp config.example.json config.json
+# 编辑 config.json 填写数据库和 Redis 配置
+```
+
+6. 启动应用
+```bash
+python main.py
+# 或使用 systemd 服务
+systemctl start antmonitor.service
+```
+
+7. 访问 Web 界面
+```
+http://localhost:8443/pages/monitor-wall.html
+```
+
+### 使用 Docker 部署
+
+```bash
+# 构建镜像
+docker build -t antbox-monitor .
+
+# 启动容器
+docker-compose up -d
+```
+
+## 配置文件
+
+### 站点配置
+
+站点配置文件位于 `config/sites.json`:
 
 ```json
 {
   "sites": [
     {
-      "ip": "10.1.102.1",
-      "location": "Zone A - Rack 01",
-      "model": "AntBox Pro"
-    },
-    {
-      "ip": "10.1.102.2",
-      "location": "Zone A - Rack 02",
-      "model": "AntBox Pro"
+      "zone": "A",
+      "ip": "10.1.101.1",
+      "name": "AntBox-A-01",
+      "type": "antbox"
     }
-  ],
-  "api_endpoints": {
-    "status": "/api/status",
-    "miners": "/api/miners",
-    "power": "/api/power"
-  },
-  "collection_interval": 60,
-  "timeout": 5,
-  "retry_count": 3
+  ]
 }
 ```
 
-### 4. 启动服务
+### 告警规则
 
-```bash
-# 方式一：直接运行（开发环境）
-python api_server.py
-
-# 方式二：使用 systemd（生产环境）
-sudo systemctl enable antmonitor.service
-sudo systemctl start antmonitor.service
-sudo systemctl status antmonitor.service
-```
-
-### 5. 访问系统
-
-打开浏览器访问：
-
-- **主仪表盘**：`https://YOUR_SERVER:8443/dashboard.html`
-- **站点扫描**：`https://YOUR_SERVER:8443/pages/scan.html`
-- **设备详情**：`https://YOUR_SERVER:8443/pages/device_detail.html?id=10.1.102.1`
-
----
-
-## 📁 项目结构
-
-```
-antbox-monitor/
-├── api_server.py              # FastAPI 主服务
-├── data_collector.py          # 数据采集器
-├── scanner_module.py          # 网络扫描模块
-├── ping_detection.py          # Ping 检测模块
-├── alert_notifier.py          # 告警通知模块
-├── database_schema.sql        # 数据库 Schema
-├── requirements.txt           # Python 依赖
-├── deploy_scan.sh             # 部署脚本
-├── config/
-│   ├── all_sites.json         # 站点配置（150 个）
-│   └── sites.json             # 站点配置（精简版）
-├── pages/
-│   ├── scan.html              # 站点扫描页面
-│   ├── device_detail.html     # 设备详情页面
-│   └── all_sites.html         # 全部站点列表
-├── js/
-│   ├── scan.js                # 扫描页面逻辑
-│   ├── scan_backend.js        # 后端扫描 API 交互
-│   └── device_detail.js       # 设备详情逻辑
-├── css/
-│   └── styles.css             # 全局样式
-└── tools/
-    └── ...                    # 辅助工具脚本
-```
-
----
-
-## 🔧 配置说明
-
-### 数据库配置
-
-在 `api_server.py` 中修改：
-
-```python
-DB_CONFIG = {
-    "host": "localhost",
-    "port": 5432,
-    "user": "antmonitor",
-    "password": "antmonitor2024",
-    "database": "antmonitor_db"
-}
-```
-
-### 采集配置
-
-在 `config/all_sites.json` 中修改：
+告警规则配置示例:
 
 ```json
 {
-  "collection_interval": 60,    // 采集周期（秒）
-  "timeout": 5,                 // 请求超时（秒）
-  "retry_count": 3,             // 重试次数
-  "max_concurrent": 50          // 最大并发数
+  "alerts": [
+    {
+      "name": "高温告警",
+      "metric": "temperature",
+      "threshold": 80,
+      "comparison": ">",
+      "channels": ["telegram", "wechat"]
+    }
+  ]
 }
 ```
 
-### 告警配置
+## 系统服务
 
-在 `alert_notifier.py` 中配置推送渠道：
-
-```python
-# Telegram Bot 配置
-TELEGRAM_BOT_TOKEN = "YOUR_BOT_TOKEN"
-TELEGRAM_CHAT_ID = "YOUR_CHAT_ID"
-
-# 微信推送配置（可选）
-WECHAT_CORP_ID = "YOUR_CORP_ID"
-WECHAT_AGENT_ID = "YOUR_AGENT_ID"
-```
-
----
-
-## 📊 性能指标
-
-| 指标 | 目标值 | 实测值 |
-|------|--------|--------|
-| 数据采集延迟 | < 10 秒 | **~5.6 秒** (150 站点) |
-| API 响应时间 (P95) | < 500ms | **< 200ms** |
-| 并发用户数 | 20+ | **50+** |
-| 系统可用性 | 99.5% | **99.9%** |
-| 扫描并发度 | 30 | **50** (可配置) |
-
----
-
-## 🛠️ 运维指南
-
-### 查看服务状态
+### 使用 systemd 管理
 
 ```bash
-# systemd 服务状态
-sudo systemctl status antmonitor.service
+# 启动服务
+sudo systemctl start antmonitor
+
+# 开机自启
+sudo systemctl enable antmonitor
+
+# 查看状态
+sudo systemctl status antmonitor
 
 # 查看日志
-sudo journalctl -u antmonitor.service -f
-
-# 检查端口
-netstat -tlnp | grep 8443
+journalctl -u antmonitor -f
 ```
 
-### 数据库维护
+服务文件: `antmonitor.service`
 
-```bash
-# 备份数据库
-pg_dump -U antmonitor antmonitor_db > backup_$(date +%Y%m%d).sql
+## 开发
 
-# 恢复数据库
-psql -U antmonitor -d antmonitor_db < backup_20260224.sql
+### 项目结构
 
-# 清理旧数据（保留 30 天）
-psql -U antmonitor -d antmonitor_db -c \
-  "DELETE FROM status_snapshots WHERE timestamp < NOW() - INTERVAL '30 days';"
+```
+antbox-monitor/
+├── main.py                 # 主应用入口
+├── antbox_collector.py     # 数据采集器
+├── config/                 # 配置文件
+├── pages/                  # Web 页面
+├── js/                     # JavaScript 文件
+├── css/                    # 样式文件
+├── api/                    # API 模块
+├── database/               # 数据库模块
+├── utils/                  # 工具函数
+├── tests/                  # 测试文件
+├── requirements.txt        # Python 依赖
+└── README.md              # 项目说明
 ```
 
-### 日志管理
+### 添加新功能
 
-```bash
-# 应用日志位置
-/var/log/antmonitor/
+1. Fork 项目
+2. 创建功能分支 (`git checkout -b feature/amazing-feature`)
+3. 提交更改 (`git commit -m 'Add some amazing feature'`)
+4. 推送到分支 (`git push origin feature/amazing-feature`)
+5. 创建 Pull Request
 
-# 日志轮转配置
-/etc/logrotate.d/antmonitor
-```
+## 性能指标
 
----
+- 数据采集延迟: < 5秒 (150个站点一轮采集)
+- API响应时间: < 200ms (P95延迟)
+- 并发用户数: 50+
+- 系统可用性: 99.9%
 
-## 🔐 安全建议
-
-1. **修改默认密码**：部署后立即修改数据库密码和 API 密钥
-2. **启用 HTTPS**：生产环境必须使用 HTTPS（自签名证书或 Let's Encrypt）
-3. **防火墙配置**：仅开放必要端口（8443），数据库端口 5432 限制本地访问
-4. **定期更新**：及时更新系统补丁和依赖包
-5. **访问控制**：为管理页面添加认证（Basic Auth 或 OAuth）
-
----
-
-## 🤝 贡献指南
+## 贡献
 
 欢迎提交 Issue 和 Pull Request！
 
-1. Fork 本项目
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 开启 Pull Request
+## 许可证
+
+本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情
+
+## 致谢
+
+- 感谢所有贡献者的支持
+- 基于 FastAPI 和 Vue.js 构建
+
+## 联系方式
+
+项目地址: https://github.com/caihongdao/antbox-monitor
 
 ---
 
-## 📄 开源协议
-
-本项目采用 [MIT 协议](LICENSE) 开源。
-
----
-
-## 📞 联系方式
-
-- **作者**：Rainbow (彩虹)
-- **Email**：[your-email@example.com]
-- **Telegram**：@your_username
-
----
-
-## 🙏 致谢
-
-感谢以下开源项目：
-
-- [FastAPI](https://fastapi.tiangolo.com/) - 现代高性能 Web 框架
-- [PostgreSQL](https://www.postgresql.org/) - 强大的开源数据库
-- [aiohttp](https://docs.aiohttp.org/) - 异步 HTTP 客户端/服务器
-- [TimescaleDB](https://www.timescale.com/) - 时序数据库扩展
-
----
-
-<div align="center">
-
-**如果这个项目对你有帮助，请给一个 ⭐ Star！**
-
-Made with ❤️ by Rainbow
-
-</div>
+**注意**: 本项目仅供学习和研究使用，请遵守当地法律法规。
